@@ -1,0 +1,69 @@
+We run MYSQL database in one container and spring boot service in other container. 
+
+We set up network where these two containers can interact.
+
+First pull docker image, 
+docker pull mysql:8.2.0
+
+Create network
+docker network create my-network
+
+Run mysql container in detached mode
+docker container run --network my-network --name database -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=fleetman -d mysql:8.2.0
+
+--network: in which network it should run.
+--name: container name
+
+Above command will create database table fleetman and we are setting database password.
+
+Output will be container id. 
+docker container exec -it <FIRST_TWO_LETTERS_OF_CONTAINER_ID> bash
+
+Login to mysql in the container.
+mysql -uroot -ppassword
+
+Now you can run any sql command.
+example: SHOW DATABASES; -- you can see fleetman table.
+
+Now in the second service, assume there is a spring boot service from which you need to connect to mysql database.
+In that service, application.properties add below properties
+spring.datasource.url=jdbc:mysql:file://database:3306/fleetman
+spring.datasource.username=root
+spring.datasource.password=password
+spring.datasource.driver-class-name=com.mysql.jdbc.Driver
+
+In datasource.url the word database is the name of the first container.
+
+Then build the image for second service.
+docker build -t spring-boot-image --build-arg SPRING_PROFILE=dev . 
+
+Run the second image in container in the same network.
+
+docker container run -p 80:8080 --network my-network --name spring-boot-container -e SPRING_PROFILE=dev spring-boot-image
+
+
+Other way to test:
+If you don't have spring boot service, 
+Pull an alpine image, download the mysql
+And connect to mysql in same network (database container)
+
+To do this:
+Run following commands:
+First login to database container.
+Docker exec -it <database or container id> bash
+Mysql -uroot -ppasword
+ALTER USER ‘root’ IDENTIFIED WITH mysql_native_password BY 'password';
+
+Exit from container.
+
+Start second container with an alpine image in the same network.
+docker container --network my-network run -it alpine
+
+Install mysql in it.
+apk add --no-cache mysql-client
+
+Login to mysql:
+mysql -uroot -ppassword -hdatabase
+
+Now you can run all sql commands
+
