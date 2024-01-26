@@ -1,0 +1,67 @@
+Pull mysql docker image 
+    docker pull mysql:8.2.0
+
+/******** Need for docker volumes ********/
+
+now run the image in docker container in detached mode.
+    docker container run --network my-network --name database -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=fleetman -d mysql:8.2.0
+
+This command will return docker container id.
+    docker container exec -it <FIRST_TWO_LETTERS_OF_CONTAINER_ID> bash
+
+Now you have logged into container.
+Login to mysql
+    mysql -uroot -ppassword
+
+Select Database schema:
+    Use fleetman
+
+Create table in this schema:
+    Show Tables;
+    Create table temp(temp varchar(25));
+    Show tables;
+
+Now exit mysql and bash and stop container.
+    exit;
+    exit;
+    docker container stop <FIRST_TWO_LETTERS_OF_CONTAINER_ID>       
+    docker container rm <FIRST_TWO_LETTERS_OF_CONTAINER_ID>
+
+Now if you run the container again, you will not see the table you created. 
+It means that data is lost.
+
+/********* Docker volume creation *********/
+
+Name the volume:
+while running the container, you can specify which directory data has to be stored in volume and what should be the name of that volume.
+syntax: -v <VOLUME_NAME>:<directory which has to be persisted>
+    docker container run -v mydata:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=fleetman -d mysql:8.2.0
+
+Type below command to see the volume with the name mydata you created.
+    docker volume ls
+
+Now we have created a volume, the tables we create will be created in /var/lib/mysql/ so it will be stored in volume
+which means even when we stop, remove container and run a new container with that volume the data we created must be preserved
+    docker container exec -it <FIRST_TWO_LETTERS_OF_CONTAINER_ID> bash
+    mysql -uroot -ppassword
+    Use fleetman
+    Create table does_this_persist(persist varchar(25));
+    show tables;
+    exit;
+    exit;
+    docker container stop <FIRST_TWO_LETTERS_OF_CONTAINER_ID>       
+    docker container rm <FIRST_TWO_LETTERS_OF_CONTAINER_ID>
+
+/******** Docker volume usage *******/
+Now run a new container with the volume you have created mydata
+    docker container run -v mydata:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=fleetman -d mysql:8.2.0
+    docker container exec -it <FIRST_TWO_LETTERS_OF_CONTAINER_ID> bash
+    mysql -uroot -ppassword
+    Use fleetman
+    show tables; 
+You can see the does_this_persist table available.
+
+/******* Docker volume mounting ******/
+Docker volume path will be selected randomly by docker, if we want that to be stored at a particular location we want then 
+instead of volume name, specify the path
+    docker container run -v <DIRECTORY_ABSOLUTE_LOCATION>:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=fleetman -d mysql:8.2.0
